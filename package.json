@@ -1,9 +1,13 @@
 {
   "name": "multipart-formdata-stream-js",
   "main": "index.js",
+  "type": "module",
   "files": [
     "index.js",
     "README.md"
   ],
-  "version": "0.0.1"
+  "version": "0.0.2",
+  "devDependencies": {
+    "expect": "^29.7.0"
+  }
 }
