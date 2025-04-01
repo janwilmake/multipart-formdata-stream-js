@@ -1,3 +1,4 @@
+//@ts-check
 /**
  * @typedef {Object} ContentDisposition
  * @property {string} name

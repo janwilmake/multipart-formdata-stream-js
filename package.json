@@ -1,5 +1,9 @@
 {
   "name": "multipart-formdata-stream-js",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "README.md"
+  ],
   "version": "0.0.1"
 }
