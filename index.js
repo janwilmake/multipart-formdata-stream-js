@@ -1,4 +1,5 @@
-//@ts-ignore
+//@ts-check
+
 // Universal Module Definition (UMD) pattern for multipart parser
 (function (root, factory) {
   if (typeof define === "function" && define.amd) {
