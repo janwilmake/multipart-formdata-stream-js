@@ -3,8 +3,9 @@
  * Test file for the JavaScript Multipart Parser
  */
 
-import { expect } from "expect";
-import {
+const { expect } = require("expect");
+
+const {
   StreamSearch,
   MATCH,
   ReadableStreamSearch,
@@ -12,8 +13,7 @@ import {
   stringToArray,
   arrayToString,
   mergeArrays,
-} from "./index.js";
-
+} = require("./index.js");
 /**
  * Creates a ReadableStream from array data
  * @param {Array<Uint8Array|string>} chunks - Data chunks to stream
