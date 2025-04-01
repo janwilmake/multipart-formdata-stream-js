@@ -666,7 +666,9 @@
    * Stream multipart form data
    * @param {ReadableStream<Uint8Array>} body - Stream containing multipart data
    * @param {string} boundary - Boundary string
-   * @returns {AsyncIterableIterator<Part<AsyncIterableIterator<Uint8Array>>>} - Parts with streamed data
+   * @returns {AsyncIterableIterator<Part>} - Parts with streamed data
+   *
+   *mhh <AsyncIterableIterator<Uint8Array>
    */
   async function* streamMultipart(body, boundary) {
     const needle = mergeArrays(dash, stringToArray(boundary));

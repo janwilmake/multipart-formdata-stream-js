@@ -237,7 +237,7 @@ function nodeStreamToWebStream(nodeStream) {
 ### Cloudflare Workers
 
 ```javascript
-import { parseMultipart } from "multipart-formdata-stream-js";
+import { mergeArrays, streamMultipart } from "./index";
 
 export default {
   async fetch(request, env, ctx) {
@@ -256,28 +256,18 @@ export default {
           });
         }
 
-        // Parse the multipart data (works natively with Cloudflare's implementation of streams)
-        const parts = await parseMultipart(request.body, boundary);
-
-        // Process the parsed parts
-        const results = parts.map((part) => {
+        const results = [];
+        for await (const part of streamMultipart(request.body, boundary)) {
+          console.log(`Field name: ${part.name}`);
           if (part.filename) {
-            // Handle file upload
-            return {
-              field: part.name,
-              filename: part.filename,
-              contentType: part.contentType,
-              size: part.data.length,
-            };
-          } else {
-            // Handle regular form field
-            const value = new TextDecoder().decode(part.data);
-            return {
-              field: part.name,
-              value,
-            };
+            console.log(`Filename: ${part.filename}`);
           }
-        });
+          results.push(part);
+
+          // Process the part data (Uint8Array)
+          const data = await collectData(part.data);
+          console.log(`Data length: ${data.length} bytes`);
+        }
 
         return new Response(JSON.stringify(results), {
           headers: { "Content-Type": "application/json" },
@@ -308,6 +298,14 @@ export default {
     );
   },
 };
+
+async function collectData(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return mergeArrays(...chunks);
+}
 ```
 
 ## API Reference
