@@ -14,7 +14,6 @@
   }
 })(typeof self !== "undefined" ? self : this, function () {
   // All your existing code goes here
-  //@ts-check
   /**
    * @typedef {Object} ContentDisposition
    * @property {string} name
@@ -24,9 +23,20 @@
   /**
    * @typedef {Object} Part
    * @property {string} name
-   * @property {*} data - Either Uint8Array or AsyncIterableIterator<Uint8Array>
-   * @property {string} [filename]
-   * @property {string} [contentType]
+   * @property {Uint8Array | AsyncIterableIterator<Uint8Array>} data
+   * @property {string[]} headerLines - the raw headers
+   * @property {string} [filename] - the filename or path
+   * @property {string} [content-type]
+   * @property {string} [content-length] uncompressed size
+   *
+   * https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Length
+   * @property {"binary"|"8bit"|"quoted-printable"|"base64"|"7bit"} [content-transfer-encoding]
+   *
+   * https://help.perforce.com/sourcepro/current/HTML/index.html#page/SourcePro_Net/protocolsug-MIMEAdvanced.26.04.html
+   *
+   * @property {string} [x-url] the url of the binary file (non-standard)
+   * @property {string} [x-file-hash] the hash of the file (non-standard)
+   *
    */
 
   /**
@@ -570,8 +580,9 @@
           entries.push(...Object.entries(parseContentDisposition(value)));
           break;
 
-        case "content-type":
-          entries.push(["contentType", value]);
+        default:
+          entries.push([header, value]);
+          break;
       }
     }
 
@@ -666,9 +677,7 @@
    * Stream multipart form data
    * @param {ReadableStream<Uint8Array>} body - Stream containing multipart data
    * @param {string} boundary - Boundary string
-   * @returns {AsyncIterableIterator<Part>} - Parts with streamed data
-   *
-   *mhh <AsyncIterableIterator<Uint8Array>
+   * @returns {AsyncIterableIterator<Part>} Parts with streamed data
    */
   async function* streamMultipart(body, boundary) {
     const needle = mergeArrays(dash, stringToArray(boundary));
@@ -754,8 +763,11 @@
 
       const bufferedChunks = [{ value: feedChunk(tail) }];
 
+      const headerLinesResult = [...(headerLines || [])];
+
       yield {
         ...parsePartHeaders(headerLines),
+        headerLines: headerLinesResult,
         data: {
           [Symbol.asyncIterator]() {
             return this;
@@ -794,6 +806,7 @@
 
   /**
    * Iterate over multipart form data, collecting each part's data
+   *
    * @param {ReadableStream<Uint8Array>} body - Stream containing multipart data
    * @param {string} boundary - Boundary string
    * @returns {AsyncIterableIterator<Part>} - Parts with collected data
@@ -826,6 +839,152 @@
     return parts;
   }
 
+  ///////////////////////////////////////////////////////////////
+  /////THE FOLLOWING HAS BEEN ADDED BY JAN WILMAKE///////////////
+  ///////////////////////////////////////////////////////////////
+
+  /**
+   * Options for getReadableStream function
+   * @typedef {Object} ReadableStreamOptions
+   * @property {Response} response - The fetch Response object
+   * @property {function(Part): boolean} [filterPart] - A sync function to filter out a part
+   * @property {function(Part): Promise<Part|null>} [transformPart] - An async function to transform a part or filter it out. You can edit any parameter here.
+   * @property {string} [outputBoundary] - Custom boundary for output. If not given, will reuse input boundary
+   */
+
+  /**
+   * Builds header lines from Part properties
+   * @param {Part} part - The part to generate headers for
+   * @returns {string[]} - Array of header lines
+   */
+  function buildHeaderLines(part) {
+    const headers = [];
+
+    // Add Content-Disposition header
+    let contentDisposition = `Content-Disposition: form-data; name="${part.name}"`;
+    if (part.filename) {
+      contentDisposition += `; filename="${part.filename}"`;
+    }
+    headers.push(contentDisposition);
+
+    // Add any headers that ought to be headers
+    for (const [key, value] of Object.entries(part)) {
+      if (
+        !["name", "data", "headerLines", "filename"].includes(key) &&
+        typeof value === "string"
+      ) {
+        headers.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`);
+      }
+    }
+
+    return headers;
+  }
+
+  /**
+   * Formats a part header for multipart output
+   * @param {string[]} headerLines - Array of header lines
+   * @param {string} boundary - The multipart boundary
+   * @returns {string} - Formatted header string
+   */
+  function formatPartHeader(headerLines, boundary) {
+    return `--${boundary}\r\n${headerLines.join("\r\n")}\r\n\r\n`;
+  }
+
+  /**
+   * Creates a readable stream of filtered and/or transformed multipart form-data
+   *
+   * @param {ReadableStreamOptions} options - Options for processing
+   * @returns {Promise<{readable: ReadableStream<Uint8Array>, boundary: string}>} - The output stream and boundary
+   */
+  async function getReadableFormDataStream({
+    response,
+    filterPart,
+    transformPart,
+    outputBoundary,
+  }) {
+    // Get the content-type header to extract boundary
+    const contentType = response.headers.get("content-type") || "";
+    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+
+    if (!boundaryMatch) {
+      throw new Error("Could not determine boundary from Content-Type header");
+    }
+
+    if (!response.body) {
+      throw new Error("No body in response");
+    }
+
+    // Extract boundary
+    const inputBoundary = boundaryMatch[1] || boundaryMatch[2];
+
+    // Generate a new boundary for output
+    const finalOutputBoundary = outputBoundary || inputBoundary;
+
+    // Create a TransformStream to filter and process the parts
+    const { readable, writable } = new TransformStream();
+
+    // Process parts in the background
+    (async () => {
+      const writer = writable.getWriter();
+      const encoder = new TextEncoder();
+
+      try {
+        // Iterate through each part of the multipart form data
+        for await (const part of iterateMultipart(
+          response.body,
+          inputBoundary,
+        )) {
+          // Apply filter if provided, default to true if not
+          const passesFilter = filterPart ? filterPart(part) : true;
+
+          if (passesFilter) {
+            if (transformPart) {
+              // Apply transformation if provided
+              const transformedPart = await transformPart(part);
+
+              // Only write if transformation returned a part
+              if (transformedPart) {
+                // Generate new header lines from the transformed part properties
+                const newHeaderLines = buildHeaderLines(transformedPart);
+
+                // Write the transformed part header
+                const headerText = formatPartHeader(
+                  newHeaderLines,
+                  finalOutputBoundary,
+                );
+                await writer.write(encoder.encode(headerText));
+
+                // Write the transformed part data
+                await writer.write(transformedPart.data);
+
+                // Write the trailing CRLF
+                await writer.write(encoder.encode("\r\n"));
+              }
+            } else {
+              // No transformation: write the original part
+              const headerText = formatPartHeader(
+                part.headerLines,
+                finalOutputBoundary,
+              );
+              await writer.write(encoder.encode(headerText));
+              await writer.write(part.data);
+              await writer.write(encoder.encode("\r\n"));
+            }
+          }
+        }
+
+        // Write the final boundary
+        await writer.write(encoder.encode(`--${finalOutputBoundary}--\r\n`));
+        await writer.close();
+      } catch (error) {
+        // Handle errors
+        await writer.abort(error);
+      }
+    })();
+
+    return { readable, boundary: finalOutputBoundary };
+  }
+
   // Return as a module object - these will be exported or added to global
   return {
     MATCH,
@@ -838,5 +997,7 @@
     arrayToString,
     mergeArrays,
     arraysEqual,
+    getReadableFormDataStream,
+    buildHeaderLines,
   };
 });

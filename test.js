@@ -210,8 +210,8 @@ function multipartPayload(parts, boundary) {
         }
 
         let contentType = "";
-        if (part.contentType) {
-          contentType = `\r\nContent-Type: ${part.contentType}`;
+        if (part["content-type"]) {
+          contentType = `\r\nContent-Type: ${part["content-type"]}`;
         }
 
         return contentDisposition + contentType + "\r\n\r\n" + part.data;
@@ -235,13 +235,13 @@ async function testMultipartParser() {
       name: "c",
       data: "file value c\r\nhas\r\nsome new \r\n lines",
       filename: "c.txt",
-      contentType: "text/plain",
+      "content-type": "text/plain",
     },
     {
       name: "d",
       data: "weird title",
       filename: "d=.txt",
-      contentType: "text/plain",
+      "content-type": "text/plain",
     },
   ];
 
@@ -293,7 +293,7 @@ async function testMultipartParser() {
   function equalParts(actual, expected) {
     expect(actual.name).toBe(expected.name);
     expect(actual.filename).toBe(expected.filename);
-    expect(actual.contentType).toBe(expected.contentType);
+    expect(actual["content-type"]).toBe(expected["content-type"]);
     expect(normalizeData(actual.data)).toBe(normalizeData(expected.data));
   }
 

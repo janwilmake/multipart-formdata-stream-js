@@ -3,9 +3,11 @@
   "main": "index.js",
   "files": [
     "index.js",
-    "README.md"
+    "README.md",
+    "types.d.ts"
   ],
-  "version": "0.0.3",
+  "types": "types.d.ts",
+  "version": "0.0.4",
   "devDependencies": {
     "expect": "^29.7.0"
   }
