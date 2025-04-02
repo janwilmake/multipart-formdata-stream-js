@@ -185,9 +185,11 @@ export type ReadableStreamOptions = {
   /** The fetch Response object containing multipart form data */
   response: Response;
   /** Optional function to filter parts (return true to keep, false to discard) */
-  filterPart?: (part: Part) => boolean;
+  filterPart?: (part: Part) => { ok: boolean; stop?: boolean };
   /** Optional async function to transform parts or filter them out (return null to discard) */
-  transformPart?: (part: Part) => Promise<Part | null>;
+  transformPart?: (
+    part: Part,
+  ) => Promise<{ part: Part | null; stop?: boolean }>;
   /** Optional custom boundary for output (defaults to input boundary) */
   outputBoundary?: string;
 };

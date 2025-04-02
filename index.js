@@ -847,8 +847,8 @@
    * Options for getReadableStream function
    * @typedef {Object} ReadableStreamOptions
    * @property {Response} response - The fetch Response object
-   * @property {function(Part): boolean} [filterPart] - A sync function to filter out a part
-   * @property {function(Part): Promise<Part|null>} [transformPart] - An async function to transform a part or filter it out. You can edit any parameter here.
+   * @property {function(Part): {ok:boolean,stop?:boolean}} [filterPart] - A sync function to filter out a part
+   * @property {function(Part): Promise<{part:Part|null,stop?:boolean}>} [transformPart] - An async function to transform a part or filter it out. You can edit any parameter here.
    * @property {string} [outputBoundary] - Custom boundary for output. If not given, will reuse input boundary
    */
 
@@ -935,17 +935,17 @@
           inputBoundary,
         )) {
           // Apply filter if provided, default to true if not
-          const passesFilter = filterPart ? filterPart(part) : true;
+          const passesFilter = filterPart ? filterPart(part) : { ok: true };
 
-          if (passesFilter) {
+          if (passesFilter.ok) {
             if (transformPart) {
               // Apply transformation if provided
               const transformedPart = await transformPart(part);
 
               // Only write if transformation returned a part
-              if (transformedPart) {
+              if (transformedPart.part) {
                 // Generate new header lines from the transformed part properties
-                const newHeaderLines = buildHeaderLines(transformedPart);
+                const newHeaderLines = buildHeaderLines(transformedPart.part);
 
                 // Write the transformed part header
                 const headerText = formatPartHeader(
@@ -955,10 +955,15 @@
                 await writer.write(encoder.encode(headerText));
 
                 // Write the transformed part data
-                await writer.write(transformedPart.data);
+                await writer.write(transformedPart.part.data);
 
                 // Write the trailing CRLF
                 await writer.write(encoder.encode("\r\n"));
+              }
+
+              if (transformedPart.stop) {
+                // stop early
+                break;
               }
             } else {
               // No transformation: write the original part
@@ -970,6 +975,11 @@
               await writer.write(part.data);
               await writer.write(encoder.encode("\r\n"));
             }
+          }
+
+          if (passesFilter.stop) {
+            // stop early
+            break;
           }
         }
 
