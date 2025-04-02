@@ -12,7 +12,7 @@ A streaming multipart form data parser that works across multiple environments: 
 
 # Context for LLMs
 
-- For building a Cloudflare Worker FormData Transformer, see [cloudflare-worker-iterator.ts](cloudflare-worker-iterator.ts) and [types.d.ts](types.d.ts)
+- For building a Cloudflare Worker FormData Transformer, see [the cloudflare folder on uithub](https://uithub.com/janwilmake/multipart-formdata-stream-js/tree/main/cloudflare)
 
 ## Installation
 

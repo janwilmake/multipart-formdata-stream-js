@@ -4,10 +4,10 @@
   "files": [
     "index.js",
     "README.md",
-    "types.d.ts"
+    "cloudflare/types.d.ts"
   ],
-  "types": "types.d.ts",
-  "version": "0.0.4",
+  "types": "cloudflare/types.d.ts",
+  "version": "0.0.6",
   "devDependencies": {
     "expect": "^29.7.0"
   }
