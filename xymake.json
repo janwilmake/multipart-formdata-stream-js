@@ -2,12 +2,12 @@
   "threads": [
     {
       "branch": "main",
-      "createdAt": "2025-04-01T21:23:47.654Z",
-      "slug": "origin",
-      "updatedAt": "2025-04-01T21:23:47.654Z",
+      "createdAt": "2025-04-01T21:28:58.453Z",
+      "slug": "thread1907183429419958459",
+      "updatedAt": "2025-04-01T21:28:58.457Z",
       "url": "https://x.com/janwilmake/status/1907181832782619110"
     }
   ],
-  "lastPostUrl": "https://x.com/janwilmake/status/1907182125486391368",
+  "lastPostUrl": "https://x.com/janwilmake/status/1907183429419958459",
   "$schema": "https://cli.xymake.com/xymake.schema.json"
 }
