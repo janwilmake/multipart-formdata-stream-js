@@ -2,13 +2,13 @@
  *  This is an example on how to use `getReadableFormDataStream` to apply a filter and transformations on FormData.
  */
 
-import { getReadableFormDataStream } from "./index";
+import { getReadableFormDataStream } from "../index";
 import { Part } from "./types";
 
 /**
  * Example filter function that determines which parts to keep
  */
-function filterPart(part: Part): boolean {
+function filterPart(part: Part): { ok: boolean; stop?: boolean } {
   // This is a dummy filter function
   // You could filter based on name, filename, content-type, etc.
 
@@ -17,20 +17,20 @@ function filterPart(part: Part): boolean {
     part.filename?.endsWith("/README.md") ||
     part.filename?.endsWith("/package.json")
   ) {
-    return true;
+    return { ok: true };
   }
 
   // Default to false - don't keep other parts
-  return false;
+  return { ok: false };
 }
 
 const transformPart = async (part: Part) => {
   if (part["content-transfer-encoding"] === "binary") {
-    return null;
+    return { part: null };
   }
 
   if (part["content-length"] && Number(part["content-length"]) > 1000) {
-    return null;
+    return { part: null };
   }
 
   part.filename = "/test" + part.filename;
@@ -55,7 +55,7 @@ const transformPart = async (part: Part) => {
       part["content-length"] = part.data.length.toString();
     }
   }
-  return part;
+  return { part };
 };
 
 /**
