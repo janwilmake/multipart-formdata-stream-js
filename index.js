@@ -846,7 +846,8 @@
   /**
    * Options for getReadableStream function
    * @typedef {Object} ReadableStreamOptions
-   * @property {Response} response - The fetch Response object
+   * @property {string|null} contentType - content-type of the request or response. used to retrieve the boundary
+   * @property {ReadableStream<Uint8Array<ArrayBufferLike>>|null} body - body of the request or response
    * @property {function(Part): {ok:boolean,stop?:boolean}} [filterPart] - A sync function to filter out a part
    * @property {function(Part): Promise<{part:Part|null,stop?:boolean}>} [transformPart] - An async function to transform a part or filter it out. You can edit any parameter here.
    * @property {string} [outputBoundary] - Custom boundary for output. If not given, will reuse input boundary
@@ -897,20 +898,20 @@
    * @returns {Promise<{readable: ReadableStream<Uint8Array>, boundary: string}>} - The output stream and boundary
    */
   async function getReadableFormDataStream({
-    response,
+    contentType,
+    body,
     filterPart,
     transformPart,
     outputBoundary,
   }) {
     // Get the content-type header to extract boundary
-    const contentType = response.headers.get("content-type") || "";
-    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+    const boundaryMatch = contentType?.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
 
     if (!boundaryMatch) {
       throw new Error("Could not determine boundary from Content-Type header");
     }
 
-    if (!response.body) {
+    if (!body) {
       throw new Error("No body in response");
     }
 
@@ -930,10 +931,7 @@
 
       try {
         // Iterate through each part of the multipart form data
-        for await (const part of iterateMultipart(
-          response.body,
-          inputBoundary,
-        )) {
+        for await (const part of iterateMultipart(body, inputBoundary)) {
           // Apply filter if provided, default to true if not
           const passesFilter = filterPart ? filterPart(part) : { ok: true };
 

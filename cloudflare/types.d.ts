@@ -182,8 +182,8 @@ export function arraysEqual(a: Uint8Array, b: Uint8Array): boolean;
  * Options for getReadableFormDataStream function
  */
 export type ReadableStreamOptions = {
-  /** The fetch Response object containing multipart form data */
-  response: Response;
+  contentType: string | null;
+  body: ReadableStream<Uint8Array<ArrayBufferLike>> | null;
   /** Optional function to filter parts (return true to keep, false to discard) */
   filterPart?: (part: Part) => { ok: boolean; stop?: boolean };
   /** Optional async function to transform parts or filter them out (return null to discard) */
