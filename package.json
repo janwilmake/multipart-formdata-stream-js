@@ -7,7 +7,7 @@
     "cloudflare/types.d.ts"
   ],
   "types": "cloudflare/types.d.ts",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "devDependencies": {
     "expect": "^29.7.0"
   }
