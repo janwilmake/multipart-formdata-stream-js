@@ -1,104 +1,38 @@
-/**
- *  This is an example on how to use `getReadableFormDataStream` to apply a filter and transformations on FormData.
- */
+import { streamMultipart } from "multipart-formdata-stream-js";
 
-import { getReadableFormDataStream } from "../index";
-import { Part } from "./types";
+// Basic file upload handler
+async function handleUpload(body, headers) {
+  // Extract boundary from Content-Type header
+  const contentType = headers.get("content-type");
+  const boundary = contentType.split("boundary=")[1];
 
-/**
- * Example filter function that determines which parts to keep
- */
-function filterPart(part: Part): { ok: boolean; stop?: boolean } {
-  // This is a dummy filter function
-  // You could filter based on name, filename, content-type, etc.
+  // Process each part
+  for await (const part of streamMultipart(body, boundary)) {
+    console.log(`Processing: ${part.name}`);
 
-  if (
-    part.filename?.endsWith(".js") ||
-    part.filename?.endsWith("/README.md") ||
-    part.filename?.endsWith("/package.json")
-  ) {
-    return { ok: true };
-  }
+    // Check if it's a file
+    if (part.filename) {
+      console.log(`File: ${part.filename}, Type: ${part["content-type"]}`);
 
-  // Default to false - don't keep other parts
-  return { ok: false };
-}
-
-const transformPart = async (part: Part) => {
-  if (part["content-transfer-encoding"] === "binary") {
-    return { part: null };
-  }
-
-  if (part["content-length"] && Number(part["content-length"]) > 1000) {
-    return { part: null };
-  }
-
-  part.filename = "/test" + part.filename;
-
-  // Modify data for TypeScript files
-  if (part.filename?.endsWith(".ts")) {
-    // Convert existing data to text
-    const decoder = new TextDecoder();
-    const originalText = decoder.decode(
-      part.data as Uint8Array<ArrayBufferLike>,
-    );
-
-    // Prepend a line
-    const modifiedText = `// Modified on ${new Date().toISOString()}\n${originalText}`;
-
-    // Convert back to Uint8Array
-    const encoder = new TextEncoder();
-    part.data = encoder.encode(modifiedText);
-
-    // Update content-length if it exists
-    if (part["content-length"]) {
-      part["content-length"] = part.data.length.toString();
-    }
-  }
-  return { part };
-};
-
-/**
- * Cloudflare Worker handler
- */
-export default {
-  async fetch(request: Request, env: any, ctx: any): Promise<Response> {
-    // URL to fetch multipart data from
-    const sourceUrl =
-      "http://ingestzip.uithub.com/https://github.com/janwilmake/fetch-each/archive/refs/heads/main.zip?omitFirstSegment=true";
-
-    try {
-      // Fetch the remote multipart content
-      const response = await fetch(sourceUrl, {
-        headers: { Authorization: `Basic ${btoa("jan:secret")}` },
-      });
-
-      if (!response.ok) {
-        return new Response(
-          `Failed to fetch data: ${response.status} ${response.statusText}`,
-          { status: 502 },
-        );
+      // Stream file data
+      let totalSize = 0;
+      for await (const chunk of part.data) {
+        // Process chunk (e.g., write to storage)
+        totalSize += chunk.length;
+        console.log(`Chunk size: ${chunk.length}`);
       }
+      console.log(`Total file size: ${totalSize}`);
+    } else {
+      // It's a text field - collect and decode
+      const decoder = new TextDecoder();
+      let text = "";
 
-      // Use the getReadableStream function with the filterPart function
-      const { readable, boundary } = await getReadableFormDataStream({
-        response,
-        filterPart,
-        transformPart,
-      });
+      for await (const chunk of part.data) {
+        text += decoder.decode(chunk, { stream: true });
+      }
+      text += decoder.decode(); // Final flush
 
-      // Return the filtered multipart stream
-      return new Response(readable, {
-        headers: {
-          "Content-Type": `multipart/form-data; boundary=${boundary}`,
-          "Content-Disposition": 'attachment; filename="filter-formdata.txt"',
-        },
-      });
-    } catch (error: any) {
-      // Handle any unexpected errors
-      return new Response(`Error processing multipart data: ${error.message}`, {
-        status: 500,
-      });
+      console.log(`Field ${part.name}: ${text}`);
     }
-  },
-};
+  }
+}

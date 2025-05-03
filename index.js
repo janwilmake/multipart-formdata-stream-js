@@ -36,6 +36,8 @@
    *
    * @property {string} [x-url] the url of the binary file (non-standard)
    * @property {string} [x-file-hash] the hash of the file (non-standard)
+   * @property {string} [x-filter] filter header (non-standard)
+   * @property {string} [x-error] error header (non-standard)
    *
    */
 

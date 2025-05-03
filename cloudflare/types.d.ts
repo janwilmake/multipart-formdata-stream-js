@@ -34,12 +34,20 @@ export type Part = {
     | "quoted-printable"
     | "base64"
     | "7bit";
-  /** Non-standard header for URL of binary file */
-  "x-url"?: string;
-  /** Non-standard header for file hash */
-  "x-file-hash"?: string;
+
   /** Allow additional custom headers */
   [key: string]: any;
+} & UITCustomHeaders;
+
+type UITCustomHeaders = {
+  /** Non-standard header for URL of binary file */
+  "x-url"?: string;
+  /** Should contain the file hash for binaries in UIT modules */
+  "x-file-hash"?: string;
+  /** If the file is filtered out, file content can be made empty, and x-filter can be set. format: plugin-id;status;message */
+  "x-filter"?: `${string};${string};${string}`;
+  /** If an error is encountered, file content must remain the same, and error can be set; format plugin-id;status;message */
+  "x-error"?: `${string};${string};${string}`;
 };
 
 /**
