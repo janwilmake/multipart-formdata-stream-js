@@ -1,0 +1,10 @@
+{
+  "$schema": "https://contextjson.com/schema",
+  "attribution": "https://github.com/janwilmake/contextjson",
+  "context": {
+    "example": {
+      "summary": "Use this example to do the most efficient stream",
+      "pathPatterns": ["streamMultipartExample.ts", "part.ts"]
+    }
+  }
+}

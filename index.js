@@ -23,7 +23,7 @@
   /**
    * @typedef {Object} Part
    * @property {string} name
-   * @property {Uint8Array | AsyncIterableIterator<Uint8Array>} data
+   * @property {AsyncIterableIterator<Uint8Array>} data
    * @property {string[]} headerLines - the raw headers
    * @property {string} [filename] - the filename or path
    * @property {string} [content-type]
@@ -806,41 +806,6 @@
     }
   }
 
-  /**
-   * Iterate over multipart form data, collecting each part's data
-   *
-   * @param {ReadableStream<Uint8Array>} body - Stream containing multipart data
-   * @param {string} boundary - Boundary string
-   * @returns {AsyncIterableIterator<Part>} - Parts with collected data
-   */
-  async function* iterateMultipart(body, boundary) {
-    for await (const part of streamMultipart(body, boundary)) {
-      const chunks = [];
-      for await (const chunk of part.data) {
-        chunks.push(chunk);
-      }
-
-      yield {
-        ...part,
-        data: mergeArrays(...chunks),
-      };
-    }
-  }
-
-  /**
-   * Parse multipart form data into an array of parts
-   * @param {ReadableStream<Uint8Array>} body - Stream containing multipart data
-   * @param {string} boundary - Boundary string
-   * @returns {Promise<Part[]>} - Array of parts
-   */
-  async function parseMultipart(body, boundary) {
-    const parts = [];
-    for await (const part of iterateMultipart(body, boundary)) {
-      parts.push(part);
-    }
-    return parts;
-  }
-
   ///////////////////////////////////////////////////////////////
   /////THE FOLLOWING HAS BEEN ADDED BY JAN WILMAKE///////////////
   ///////////////////////////////////////////////////////////////
@@ -933,7 +898,7 @@
 
       try {
         // Iterate through each part of the multipart form data
-        for await (const part of iterateMultipart(body, inputBoundary)) {
+        for await (const part of streamMultipart(body, inputBoundary)) {
           // Apply filter if provided, default to true if not
           const passesFilter = filterPart ? filterPart(part) : { ok: true };
 
@@ -1001,8 +966,6 @@
     StreamSearch,
     ReadableStreamSearch,
     streamMultipart,
-    iterateMultipart,
-    parseMultipart,
     stringToArray,
     arrayToString,
     mergeArrays,
