@@ -1,4 +1,5 @@
 {
+  "version": "0.0.13",
   "name": "multipart-formdata-stream-js",
   "main": "index.js",
   "files": [
@@ -7,7 +8,6 @@
     "cloudflare/types.d.ts"
   ],
   "types": "cloudflare/types.d.ts",
-  "version": "0.0.11",
   "devDependencies": {
     "expect": "^29.7.0"
   }
