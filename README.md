@@ -10,10 +10,6 @@ A streaming multipart form data parser that works across multiple environments: 
 - Handles large files efficiently
 - TypeScript type definitions included
 
-# Context for LLMs
-
-For building a Cloudflare Worker FormData Transformer, see [the cloudflare folder on uithub](https://uithub.com/janwilmake/multipart-formdata-stream-js/tree/main/cloudflare?lines=false)
-
 ## Installation
 
 ```bash
