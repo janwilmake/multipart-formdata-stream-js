@@ -1,22 +1,60 @@
-import { Part } from "./part";
-
 // Type definitions for multipart-parser
 export as namespace MultipartParser;
 
 /**
+ * Represents a multipart form part with headers and streaming data
+ */
+export interface Part {
+  /** Field name from the Content-Disposition header */
+  name: string;
+  /** Async iterable for streaming the part's data */
+  data: AsyncIterableIterator<Uint8Array>;
+  /** Array of raw header lines */
+  headerLines: string[];
+  /** Optional filename if the part represents a file upload */
+  filename?: string;
+  /** MIME content type */
+  "content-type"?: string;
+  /** Uncompressed size in bytes */
+  "content-length"?: string;
+  /** Content transfer encoding method */
+  "content-transfer-encoding"?:
+    | "binary"
+    | "8bit"
+    | "quoted-printable"
+    | "base64"
+    | "7bit";
+  /** Non-standard: URL of the binary file */
+  "x-url"?: string;
+  /** Non-standard: Hash of the file */
+  "x-file-hash"?: string;
+  /** Non-standard: Filter header */
+  "x-filter"?: string;
+  /** Non-standard: Error header */
+  "x-error"?: string;
+  /** Allow any other header properties */
+  [key: string]: any;
+}
+
+/**
  * Represents the parsed content disposition from a multipart form part header
  */
-export type ContentDisposition = {
+export interface ContentDisposition {
   /** Field name from the Content-Disposition header */
   name: string;
   /** Optional filename if the part represents a file upload */
   filename?: string;
-};
+}
 
 /**
  * Symbol used to indicate a needle match in stream search results
  */
 export const MATCH: unique symbol;
+
+/**
+ * Type for tokens returned by the StreamSearch
+ */
+export type Token = Uint8Array | typeof MATCH;
 
 /**
  * Implements the Boyer-Moore-Horspool string search algorithm
@@ -33,7 +71,7 @@ export class StreamSearch {
    * @param chunk Data chunk to search in
    * @returns Array of tokens (Uint8Array data or MATCH symbol)
    */
-  feed(chunk: Uint8Array): (Uint8Array | typeof MATCH)[];
+  feed(chunk: Uint8Array): Token[];
 
   /**
    * End the search and return remaining lookbehind buffer
@@ -53,7 +91,7 @@ export class ReadableStreamSearch {
    */
   constructor(
     needle: Uint8Array | string,
-    readableStream: ReadableStream<Uint8Array>,
+    readableStream: ReadableStream<Uint8Array>
   );
 
   /**
@@ -84,7 +122,7 @@ export class ReadableStreamSearch {
    * Async iterator for search results
    * @returns Async iterator yielding search tokens
    */
-  [Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array | typeof MATCH>;
+  [Symbol.asyncIterator](): AsyncIterableIterator<Token>;
 }
 
 /**
@@ -95,7 +133,7 @@ export class ReadableStreamSearch {
  */
 export function streamMultipart(
   body: ReadableStream<Uint8Array>,
-  boundary: string,
+  boundary: string
 ): AsyncIterableIterator<Part>;
 
 /**
@@ -130,18 +168,20 @@ export function arraysEqual(a: Uint8Array, b: Uint8Array): boolean;
 /**
  * Options for getReadableFormDataStream function
  */
-export type ReadableStreamOptions = {
+export interface ReadableStreamOptions {
+  /** Content-Type header value containing boundary information */
   contentType: string | null;
-  body: ReadableStream<Uint8Array<ArrayBufferLike>> | null;
-  /** Optional function to filter parts (return true to keep, false to discard) */
+  /** ReadableStream containing multipart form data */
+  body: ReadableStream<Uint8Array> | null;
+  /** Optional sync function to filter parts */
   filterPart?: (part: Part) => { ok: boolean; stop?: boolean };
-  /** Optional async function to transform parts or filter them out (return null to discard) */
+  /** Optional async function to transform parts or filter them out */
   transformPart?: (
-    part: Part,
+    part: Part
   ) => Promise<{ part: Part | null; stop?: boolean }>;
   /** Optional custom boundary for output (defaults to input boundary) */
   outputBoundary?: string;
-};
+}
 
 /**
  * Creates a readable stream of filtered and/or transformed multipart form-data
@@ -149,7 +189,7 @@ export type ReadableStreamOptions = {
  * @returns Promise resolving to object with readable stream and boundary
  */
 export function getReadableFormDataStream(
-  options: ReadableStreamOptions,
+  options: ReadableStreamOptions
 ): Promise<{ readable: ReadableStream<Uint8Array>; boundary: string }>;
 
 /**
@@ -158,3 +198,10 @@ export function getReadableFormDataStream(
  * @returns Array of header lines
  */
 export function buildHeaderLines(part: Part): string[];
+
+/**
+ * Parse a Content-Disposition header value
+ * @param header Header value to parse
+ * @returns Parsed content disposition object
+ */
+export function parseContentDisposition(header: string): ContentDisposition;
